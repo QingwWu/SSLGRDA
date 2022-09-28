@@ -1,5 +1,5 @@
 # SSLGRDA
-SSLGRDA: Self-supervised learning on graphs for pre-dicting non-coding RNA-disease associations
+SSLGRDA: Self-supervised learning on graphs for predicting non-coding RNA-disease associations
 
 #Requirement
 
