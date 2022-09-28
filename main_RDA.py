@@ -89,9 +89,9 @@ for loop in range(5):
             MA_args = MA_get_args()
             fea = MA_hete(MA_args,args.ds,args.dn,gpu_id=None)
             
-    with open('D:/bioinformatics/2_model/GCN_model/SSLGRDA/datasets/tMat.pkl', 'rb') as fs:
+    with open('./datasets/tMat.pkl', 'rb') as fs:
     	testMat = pickle.load(fs).todense()
-    with open('D:/bioinformatics/2_model/GCN_model/SSLGRDA/datasets/allMat.pkl', 'rb') as fs:
+    with open('./datasets/allMat.pkl', 'rb') as fs:
     	rd = pickle.load(fs).todense()    
     m=rd.shape[0]
     d=rd.shape[1] 
@@ -109,13 +109,11 @@ for loop in range(5):
             testknown.append(ind)
     allInd=list(range(0,m*d))
     allInd1=list(set(allInd).difference(set(fullknown)))
-    #随机生成和已知关联索引同样大小的负样本索引
     knownInd = list(set(fullknown).difference(set(testknown)))
     negInd=random.sample(allInd1,len(knownInd))
     # negativeSampleIndices=random.sample(allIndices1,int(0.2*len(allIndices1)))
-    #所有样本索引（含已知关联和负样本索引）
     posNegInd=knownInd+negInd
-    #所有未知索引
+
     allnegs= allInd1#list(set(allIndices1).difference(set(negativeSampleIndices)))
     posNegRNA=[]
     posNegDis=[]             
@@ -125,7 +123,6 @@ for loop in range(5):
         posNegRNA.append(k)
         posNegDis.append(l)
     
-    ########################特征向量####################################
     RNAFeature = rfea[posNegRNA]
     DisFeature = dfea[posNegDis]        
     trainFeature = np.hstack((RNAFeature,DisFeature))
@@ -161,12 +158,8 @@ for loop in range(5):
         gposNegDis.append(l)
     gRNAfea = rfea[gposNegRNA]
     gDisfea = dfea[gposNegDis]
-    # m5cv=np.random.randint(gRNAfea.shape[0],size=1*tFeature.shape[0])
+
     m5cv = np.random.randint(gRNAfea.shape[0],size=int(0.2*gRNAfea.shape[0]))
-    #-------------上面的随机生成会有重复值-----------------#
-    # m5cv0 = list(np.arange(gRNAfea.shape[0]))
-    # random.shuffle(m5cv0)
-    # m5cv = m5cv0[:int(0.2*gRNAfea.shape[0])]
     
     gFeature=np.hstack((gRNAfea,gDisfea))[m5cv]
     tgedge = np.vstack((np.array(gposNegRNA),np.array(gposNegDis)+m)).T[m5cv].T
@@ -179,18 +172,6 @@ for loop in range(5):
     test_P_label=np.ones((tFeature.shape[0],1))
     test_N_label=np.zeros((gFeature.shape[0],1))
     y_test=np.concatenate((test_P_label,test_N_label),axis=0)
-
-    ###################  嵌入表示可视化  ##############################  
-    # x_tnse = TSNE(n_components=2,random_state=33).fit_transform(trainFeature)
-    # inix_tnse = TSNE(n_components=2,random_state=44).fit_transform( X_test)
-    # plt.figure(figsize=(10,5))
-    # plt.subplot(121)
-    # plt.scatter(x_tnse[:,0],x_tnse[:,1],c=y_train.ravel(), label='t-SNE')
-    # plt.legend()
-    # plt.subplot(122)
-    # plt.scatter(inix_tnse[:,0],inix_tnse[:,1],c=y_test.ravel(), label='test-SNE')
-    # plt.legend()        
-    # plt.show()  
       
     y_pred_proba = clf.predict_proba(X_test)[:, 1]
     y_pred = clf.predict(X_test)
@@ -212,13 +193,11 @@ for loop in range(5):
     f1score +=f1_score(y_test.ravel(), y_pred,average='weighted')
     f1score2 +=f1_score(y_test.ravel(), y_pred,average='binary')
     mrr,mr= evalu(tedge, y_pred_proba, y_test.ravel())
-    mrr2,mr2= evalu(tedge2, y_pred_proba, y_test.ravel())
-    print('局部排名结果',mrr,mr)       
+    mrr2,mr2= evalu(tedge2, y_pred_proba, y_test.ravel())     
     lmrr += mrr
     lmr += mr
     lmrr2 += mrr2
     lmr2 += mr2        
-    ########计算 Hist@topK #############
     PAD = 0
     scores_len = 0
     y_prob = np.array(y_pred_proba)
@@ -240,8 +219,7 @@ for loop in range(5):
     hist10 +=scores['hits@10']
     hist50 +=scores['hits@50']
     hist100 +=scores['hits@100']        
-
-    ########计算 MR MRR #############        
+      
     MR = mean_rank(y_test, y_pred_proba)
     MRR = mean_reciprocal_ranks(y_test, y_pred_proba)
     AP = average_precision(y_test, y_pred_proba)
@@ -252,54 +230,10 @@ for loop in range(5):
 aucstd = np.std(np.array(auclist))
 prstd = np.std(np.array(prlist))
     
-print('#'*10,'%d次随机8:2划分模型准确性结果'%(loop+1),'#'*10)
 auc_mean = allauc/(loop+1)
 pr_mean = allpr/(loop+1)
 f1_mean = f1score/(loop+1)
-f2_mean = f1score2/(loop+1)
-p_mean = prec/(loop+1)
-r_mean = reca/(loop+1)
-print('%s_%s_%s%s模型AUC、PR、F1、precision和recall:'%(args.mt,args.gt,args.ds,args.dn),\
-      "%.5f"%auc_mean,'和', "%.5f"%pr_mean, "%.5f"%f1_mean, "%.5f"%f2_mean, "%.5f"%p_mean, "%.5f"%r_mean)
-    
-print('#'*10,'%d次随机8:2划分排名结果'%(loop+1),'#'*10)
-all_mr = allmr/(loop+1)
-all_mrr = allmrr/(loop+1)
-print('%s_%s_%s%s模型MR和MRR:'%(args.mt,args.gt,args.ds,args.dn), "%.5f"%all_mr,'和', "%.5f"%all_mrr)    
-l_mr = lmr/(loop+1)
-l_mrr = lmrr/(loop+1)
-print('%s_%s_%s%s模型局部排名结果MR和MRR:'%(args.mt,args.gt,args.ds,args.dn), "%.5f"%l_mr,'和', "%.5f"%l_mrr)   
-l_mr2 = lmr2/(loop+1)
-l_mrr2 = lmrr2/(loop+1)
-print('%s_%s_%s%s模型局部排名结果2MR和MRR:'%(args.mt,args.gt,args.ds,args.dn), "%.5f"%l_mr2,'和', "%.5f"%l_mrr2) 
-hit10 =hist10/(loop+1)
-hit50 =hist50/(loop+1)
-hit100 =hist100/(loop+1)
-print('%s_%s_%s%s模型hist@10、50、100:'%(args.mt,args.gt,args.ds,args.dn), "%.5f"%hit10,'和', "%.5f"%hit50, "%.5f"%hit100)
 
-result = []
-result.append(auc_mean)
-result.append(pr_mean)
-result.append(f2_mean)
-result.append(hit10)
-result.append(hit50)
-result.append(hit100)
-result.append(all_mr)
-result.append(all_mrr)
-result.append(l_mr)
-result.append(l_mr2)
-result.append(l_mrr)
-result.append(l_mrr2)
-result.append(f1_mean)
-result.append(aucstd)
-result.append(prstd)
-
-col =['auc','pr','f1','h10','h50','h100','mr','mrr','lmr','lmr2','lmrr','lmrr2','f1_w','aucstd','prstd']
-result =np.array(result)
-result2 = result.reshape((1,15))
-
-df=pd.DataFrame(result2,columns=col)
-df.to_csv('D:/bioinformatics/2_model/GCN_model/SSLGRDA/result/result_%s_%s_%s%s.csv'%(args.mt,args.gt,args.ds,args.dn))
   
     
     
