@@ -23,7 +23,6 @@ def edge_index_from_dict(graph_dict, num_nodes=None):
         col.append(j)
     edge_index = torch.stack([torch.tensor(row), torch.tensor(col)], dim=0).long()
     edge_index, _ = remove_self_loops(edge_index)
-    # edge_index, _  = add_self_loops(edge_index)
     edge_index, _ = coalesce(edge_index, None, num_nodes, num_nodes)
     return edge_index
 
